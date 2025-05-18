@@ -2,23 +2,20 @@ import express, { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import {jwtSecret} from "@repo/be-config/config"
+import {CreateUserSchema,SighinUserSchema,CreateRoomSchema} from "@repo/common/types"
 
-const bcryptPass = "ajsghfajf";
-const jwtSecret = "a;kshncib ";
 const app = express();
 app.use(express.json());
 
-const userSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(6),
-});
 
 app.post("/signup", async (req, res) => {
-  const parsed = userSchema.safeParse(req.body);
+
+  const parsed = CreateUserSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ message: "Invalid input" });
+    res.status(400).json({ message: "Invalid input" });
   }
-  const { username, password } = parsed.data;
+  const {name, username, password }   = parsed.data;
   const user = db.findOne({
     username,
   });
@@ -29,6 +26,7 @@ app.post("/signup", async (req, res) => {
   } else {
     const encryptedPassword = await bcrypt.hash(password, 5);
     db.create({
+      name,
       username,
       encryptedPassword,
     });
@@ -37,9 +35,10 @@ app.post("/signup", async (req, res) => {
 });
 
 app.post("/signin", async (req, res) => {
-  const parsed = userSchema.safeParse(req.body);
+ 
+  const parsed = SigninSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ message: "Invalid input" });
+    res.status(400).json({ message: "Invalid input" });
   }
   const { username, password } = parsed.data;
   const user = db.findOne({
@@ -65,6 +64,12 @@ app.post("/signin", async (req, res) => {
 });
 
 function auth(req: Request, res: Response, next: NextFunction) {
+  
+  const parsed = CreateRoomSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: "Invalid input" });
+  }
+
   if (!req.headers.authorization)
     res.status(401).json({ message: "please login" });
   const authHeader = req.headers.authorization;

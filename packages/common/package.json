@@ -1,0 +1,24 @@
+{
+  "name": "@repo/common",
+  "version": "1.0.0",
+  "description": "",
+  "main": "types.js",
+  "exports": {
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": " tsc -b && node dist/types.js",
+    "start": " node dist/types.js"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "zod": "^3.24.4"
+  }
+}
