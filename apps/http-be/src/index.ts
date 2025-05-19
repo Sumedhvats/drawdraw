@@ -15,7 +15,7 @@ app.use(express.json());
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
   const parsed = CreateUserSchema.safeParse(req.body);
   console.log(req.body);
-  
+
   if (!parsed.success) {
     res.status(400).json({ message: "Invalid input" });
     return;
@@ -74,13 +74,14 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
 });
 
 function auth(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization as string;
   if (!authHeader) {
     res.status(401).json({ message: "Please login" });
     return;
   }
 
   const token = authHeader.split(" ")[1];
+
   if (!token) {
     res.status(401).json({ message: "Token missing" });
     return;
@@ -89,31 +90,36 @@ function auth(req: Request, res: Response, next: NextFunction): void {
   try {
     const decoded = jwt.verify(token, jwtSecret);
     (req as any).user = decoded;
+    //@ts-ignore
+    req.userId = decoded.userId;
     next();
   } catch {
     res.status(403).json({ message: "Invalid token" });
   }
 }
 
-app.post("/createRoom", auth, async (req: Request, res: Response): Promise<void> => {
-  const parsed = CreateRoomSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ message: "Invalid input" });
-    return;
+app.post(
+  "/createRoom",
+  auth,
+  async (req: Request, res: Response): Promise<void> => {
+    const parsed = CreateRoomSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Invalid input" });
+      return;
+    }
+    //@ts-ignore
+    const userId = req.userId;
+
+    const room=await db.room.create({
+      data: {
+        slug:parsed.data.name,
+        adminId: userId,
+      },
+    });
+
+    res.status(201).json({ message: "Room created", roomId:room.id });
   }
-
-  const slug = (Math.random() + 1).toString(36).substring(4);
-  const user = (req as any).user;
-
-  await db.room.create({
-    data: {
-      slug,
-      adminId: user.userId,
-    },
-  });
-
-  res.status(201).json({ message: "Room created", slug });
-});
+);
 
 app.listen(3002, () => {
   console.log("Server running on http://localhost:3002");
