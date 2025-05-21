@@ -1,37 +1,99 @@
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { jwtSecret } from "@repo/be-config/config";
-const wss = new WebSocketServer({ port: 8080 });
-interface User{
-  ws:WebSocket,
-  rooms:[],
-  userId:string
+import { prismaClient as db } from "@repo/database/client";
+
+interface User {
+  ws: WebSocket;
+  rooms: number[];
+  userId: string;
 }
 
+const users: User[] = [];
+const wss = new WebSocketServer({ port: 8080 });
 
-const users:User[] = []
-
-wss.on("connection", (ws) => {
+wss.on("connection",(ws, request) => {
   function checkUser(token: string): string | null {
-    const decoded = jwt.verify(token, jwtSecret);
-    if (!decoded || !(decoded as JwtPayload).userId) {
+    try {
+      const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+      
+      return decoded.userId || null;
+    } catch {
       return null;
-    } else {
-      //@ts-ignore
-      return decoded.userId;
     }
   }
-  const url = ws.url;
+
+  const url = request.url;
   if (!url) {
+    ws.close();
     return;
   }
+
   const queryParam = new URLSearchParams(url.split("?")[1]);
-  const token = queryParam.get("token") as string;
-  const userId = checkUser(token)
-    if(!userId){
-      ws.close
+  const token = queryParam.get("token");
+  const userId = token ? checkUser(token) : null;
+
+  if (!userId) {
+    ws.send("Unauthorized. Closing connection.");
+    ws.close();
+    return;
+  }
+
+  const user: User = { userId, rooms: [], ws };
+  users.push(user);
+
+  
+
+  ws.on("message",async  (data) => {
+    console.log(data.toString());
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(data.toString());
+      console.log("parsed date: "+parsedData);
+    } catch {
+      return;
     }
-  ws.on("message", (data) => {
-    ws.send("pong ");
+
+    if (parsedData.type === "join_room") {
+      
+      user.rooms.push(parsedData.roomId);
+
+      
+      ws.send("connected")
+    }
+
+    if (parsedData.type == "leave_room") {
+      user.rooms = user.rooms.filter((roomId) => roomId !== parsedData.roomId);
+      ws.send("diconnected")
+    }
+
+    if (parsedData.type == "chat") {
+
+       await db.chat.create({
+        data: {
+          roomId: Number(parsedData.roomId),
+          message:parsedData.message,
+          userId
+        }
+      });
+
+      users.forEach((u) => {
+        if (u.rooms.includes(parsedData.roomId)) {
+          u.ws.send(
+            JSON.stringify({
+              type: "chat",
+              message: parsedData.message,
+              roomId: parsedData.roomId,
+            })
+          );
+        }
+      });
+    }
+  });
+
+  ws.on("close", () => {
+    const index = users.findIndex((u) => u.ws === ws);
+    if (index !== -1) users.splice(index, 1);
   });
 });

@@ -110,17 +110,69 @@ app.post(
     //@ts-ignore
     const userId = req.userId;
 
-    const room=await db.room.create({
+    const room = await db.room.create({
       data: {
-        slug:parsed.data.name,
+        slug: parsed.data.name,
         adminId: userId,
       },
     });
 
-    res.status(201).json({ message: "Room created", roomId:room.id });
+    res.status(201).json({ message: "Room created", roomId: room.id });
   }
 );
 
+app.get("/chats", auth, async (req: Request, res: Response): Promise<void> => {
+  const roomId = Number(req.params.roomId);
+
+  try {
+    const chats =await db.chat.findMany({
+      where: {
+        roomId: roomId,
+      },
+      orderBy: {
+        id: "desc",
+      },
+      take: 50,
+    });
+    console.log(chats);
+    
+    res.status(200).json({
+      chats,
+    });
+  } catch (e) {
+    res.status(400).json({
+      message: e,
+    });
+  }
+});
+app.listen(3002, () => {
+  console.log("Server running on http://localhost:3002");
+});
+
+app.get("/room:slug", auth, async (req: Request, res: Response): Promise<void> => {
+  const slug = req.params.roomId;
+if(!slug){
+  res.status(400).json({
+    "message":"no slug"
+  })
+  return
+}
+  try {
+    const room =await db.room.findFirst({
+      where: {
+        slug
+      },
+    });
+    
+    res.status(200).json({
+      room,
+    });
+  } catch (e) {
+    res.status(400).json({
+      message: e,
+    });
+  }
+});
 app.listen(3002, () => {
   console.log("Server running on http://localhost:3002");
 });
