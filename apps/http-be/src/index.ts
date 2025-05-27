@@ -3,14 +3,15 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { jwtSecret } from "@repo/be-config/config";
 import { prismaClient as db } from "@repo/database/client";
+import cors from "cors";
 import {
   CreateUserSchema,
   SighinUserSchema,
   CreateRoomSchema,
 } from "@repo/common/types";
-
 const app = express();
 app.use(express.json());
+app.use(cors())
 
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
   const parsed = CreateUserSchema.safeParse(req.body);
@@ -74,32 +75,43 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
 });
 
 function auth(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization as string;
+  const authHeader = req.headers.authorization;
+
   if (!authHeader) {
-    res.status(401).json({ message: "Please login" });
-    return;
+    res.status(401).json({ message: "Authorization header missing. Please login." });
+    return
+  }
+
+  // Check for "Bearer <token>" format
+  if (!authHeader.startsWith("Bearer ")) {
+    res.status(400).json({ message: "Malformed authorization header." });
+  return
   }
 
   const token = authHeader.split(" ")[1];
 
   if (!token) {
-    res.status(401).json({ message: "Token missing" });
-    return;
-  }
+     res.status(401).json({ message: "Token not provided in authorization header." });
+  return
+    }
+
+  console.log("Token received:", token);
 
   try {
     const decoded = jwt.verify(token, jwtSecret);
     (req as any).user = decoded;
     //@ts-ignore
-    req.userId = decoded.userId;
+    req.userId = (decoded as any).userId;
     next();
-  } catch {
-    res.status(403).json({ message: "Invalid token" });
-  }
+  } catch (e) {
+    console.log("JWT verification failed:", e);
+     res.status(403).json({ message: "Invalid token" });
+  return
+    }
 }
 
-app.post(
-  "/createRoom",
+
+app.post("/createRoom",
   auth,
   async (req: Request, res: Response): Promise<void> => {
     const parsed = CreateRoomSchema.safeParse(req.body);
@@ -121,32 +133,20 @@ app.post(
   }
 );
 
-app.get("/chats", auth, async (req: Request, res: Response): Promise<void> => {
+app.get("/chats/:roomId", auth, async (req: Request, res: Response): Promise<void> => {
   const roomId = Number(req.params.roomId);
 
   try {
-    const chats =await db.chat.findMany({
-      where: {
-        roomId: roomId,
-      },
-      orderBy: {
-        id: "desc",
-      },
+    const chats = await db.chat.findMany({
+      where: { roomId },
+      orderBy: { id: "desc" },
       take: 50,
     });
-    console.log(chats);
-    
-    res.status(200).json({
-      chats,
-    });
+
+    res.status(200).json({chats:chats });
   } catch (e) {
-    res.status(400).json({
-      message: e,
-    });
+    res.status(400).json({ message: e });
   }
-});
-app.listen(3002, () => {
-  console.log("Server running on http://localhost:3002");
 });
 
 app.get("/room:slug", auth, async (req: Request, res: Response): Promise<void> => {

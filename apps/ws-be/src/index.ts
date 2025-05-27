@@ -13,6 +13,8 @@ const users: User[] = [];
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("connection",(ws, request) => {
+  console.log("someone tried to connect");
+  
   function checkUser(token: string): string | null {
     try {
       const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
@@ -77,6 +79,9 @@ wss.on("connection",(ws, request) => {
           userId
         }
       });
+      console.log("created chat on db");
+      
+
 
       users.forEach((u) => {
         if (u.rooms.includes(parsedData.roomId)) {
