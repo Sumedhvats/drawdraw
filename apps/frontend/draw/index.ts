@@ -8,30 +8,35 @@ type Shape =
     }
   | {
       type: "circle";
-      centerX: number;
-      centerY: number;
-      radius: number;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }
+  | {
+      type: "pencil";
+      points: { x: number; y: number }[];
     };
 
 export async function initDraw(
   ctx: CanvasRenderingContext2D,
   roomId: string,
-  socket: WebSocket
+  socket: WebSocket,
+  toolRef: React.MutableRefObject<"circle" | "rectangle" | "pencil">
 ) {
   const canvas = ctx.canvas;
   let existingShapes: Shape[] = await getExistingShapes(roomId);
 
   socket.onmessage = (event) => {
-  console.log("Received socket message", event.data);
-  const message = JSON.parse(event.data);
-  if (message.type === "chat") {
-    const parsed = JSON.parse(message.message);
-    const shape = parsed.createdShape as Shape;
-    existingShapes.push(shape);
-    clearCanvas(existingShapes, ctx);
-  }
-};
-
+    console.log("Received socket message", event.data);
+    const message = JSON.parse(event.data);
+    if (message.type === "chat") {
+      const parsed = JSON.parse(message.message);
+      const shape = parsed.createdShape as Shape;
+      existingShapes.push(shape);
+      clearCanvas(existingShapes, ctx);
+    }
+  };
 
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -41,8 +46,9 @@ export async function initDraw(
 
   let isDrawing = false;
   let startX = 0;
-
   let startY = 0;
+  let pencilPoints: { x: number; y: number }[] = [];
+
   const getMousePos = (e: MouseEvent) => {
     const rect = canvas.getBoundingClientRect();
     return {
@@ -56,25 +62,52 @@ export async function initDraw(
     isDrawing = true;
     startX = pos.x;
     startY = pos.y;
+
+    if (toolRef.current === "pencil") {
+      pencilPoints = [{ x: pos.x, y: pos.y }];
+    }
   };
 
   const onMouseUp = (e: MouseEvent) => {
     if (!isDrawing) return;
 
     const pos = getMousePos(e);
-    const width = pos.x - startX;
-    const height = pos.y - startY;
-    const createdShape: Shape = {
-      type: "rect",
-      x: startX,
-      y: startY,
-      width,
-      height,
-    };
-    existingShapes.push(createdShape);
+    let createdShape: Shape;
 
+    if (toolRef.current === "rectangle") {
+      const width = pos.x - startX;
+      const height = pos.y - startY;
+      createdShape = {
+        type: "rect",
+        x: startX,
+        y: startY,
+        width,
+        height,
+      };
+    } else if (toolRef.current === "circle") {
+      const width = pos.x - startX;
+      const height = pos.y - startY;
+      createdShape = {
+        type: "circle",
+        x: startX,
+        y: startY,
+        width,
+        height,
+      };
+    } else if (toolRef.current === "pencil") {
+      pencilPoints.push({ x: pos.x, y: pos.y });
+      createdShape = {
+        type: "pencil",
+        points: [...pencilPoints],
+      };
+    } else {
+      return; // Invalid tool
+    }
+
+    existingShapes.push(createdShape);
     isDrawing = false;
     clearCanvas(existingShapes, ctx);
+    
     socket.send(
       JSON.stringify({
         type: "chat",
@@ -84,18 +117,46 @@ export async function initDraw(
         roomId: roomId,
       })
     );
+
+    // Reset pencil points for next drawing
+    if (toolRef.current === "pencil") {
+      pencilPoints = [];
+    }
   };
 
   const onMouseMove = (e: MouseEvent) => {
     if (!isDrawing) return;
 
     const pos = getMousePos(e);
-    const width = pos.x - startX;
-    const height = pos.y - startY;
-
     clearCanvas(existingShapes, ctx);
     ctx.strokeStyle = "white";
-    ctx.strokeRect(startX, startY, width, height);
+
+    if (toolRef.current === "rectangle") {
+      const width = pos.x - startX;
+      const height = pos.y - startY;
+      ctx.strokeRect(startX, startY, width, height);
+    } else if (toolRef.current === "circle") {
+      const width = pos.x - startX;
+      const height = pos.y - startY;
+      const centerX = startX + width / 2;
+      const centerY = startY + height / 2;
+      const radiusX = Math.abs(width / 2);
+      const radiusY = Math.abs(height / 2);
+      
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (toolRef.current === "pencil") {
+      pencilPoints.push({ x: pos.x, y: pos.y });
+      
+      // Draw the current pencil stroke
+      ctx.beginPath();
+      ctx.moveTo(pencilPoints[0].x, pencilPoints[0].y);
+      for (let i = 1; i < pencilPoints.length; i++) {
+        ctx.lineTo(pencilPoints[i].x, pencilPoints[i].y);
+      }
+      ctx.stroke();
+    }
   };
 
   function clearCanvas(shapes: Shape[], ctx: CanvasRenderingContext2D) {
@@ -110,12 +171,27 @@ export async function initDraw(
       if (shape.type === "rect") {
         ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
       } else if (shape.type === "circle") {
+        const centerX = shape.x + shape.width / 2;
+        const centerY = shape.y + shape.height / 2;
+        const radiusX = Math.abs(shape.width / 2);
+        const radiusY = Math.abs(shape.height / 2);
+        
         ctx.beginPath();
-        ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (shape.type === "pencil") {
+        ctx.beginPath();
+        if (shape.points.length > 0) {
+          ctx.moveTo(shape.points[0].x, shape.points[0].y);
+          for (let i = 1; i < shape.points.length; i++) {
+            ctx.lineTo(shape.points[i].x, shape.points[i].y);
+          }
+          ctx.stroke();
+        }
       }
     });
   }
+
   async function getExistingShapes(roomId: string) {
     try {
       const response = await fetch(
@@ -124,7 +200,7 @@ export async function initDraw(
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDgyODgzMDksImV4cCI6MTc0ODg5MzEwOX0.1JJirS45iflaOxHGqA9TKE53GUXnfVQbdk7jJv6KynU`, // or wherever your token is stored
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDgyODgzMDksImV4cCI6MTc0ODg5MzEwOX0.1JJirS45iflaOxHGqA9TKE53GUXnfVQbdk7jJv6KynU`,
           },
         }
       );

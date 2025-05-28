@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { Canvas } from "./Canvas";
 import { ToolSelector } from "./ToolSelector";
@@ -11,7 +10,6 @@ export function CanvasRoom({ roomId }: { roomId: string }) {
 
   useEffect(() => {
     const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}?token=your_token_here`;
-
     if (!wsUrl) {
       setError("WebSocket URL is not defined.");
       return;
