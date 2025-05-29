@@ -1,7 +1,7 @@
 "use client"
 import { initDraw } from "@/draw";
 import { useEffect, useRef, useState } from "react";
-
+import rough from "roughjs"
 export function Canvas({ 
   roomId, 
   socket, 
@@ -15,8 +15,6 @@ export function Canvas({
   const [dimensions, setDimensions] = useState({ width: 1920, height: 1080 });
   const toolRef = useRef(tool);
 const cleanupRef = useRef<(() => void) | undefined>(undefined);
-
-  // Update tool reference when tool changes
   useEffect(() => {
     toolRef.current = tool;
   }, [tool]);
@@ -29,6 +27,7 @@ const cleanupRef = useRef<(() => void) | undefined>(undefined);
     const setup = async () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      const roughCanvas = rough.canvas(canvas);
       
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -38,7 +37,7 @@ const cleanupRef = useRef<(() => void) | undefined>(undefined);
         cleanupRef.current();
       }
       
-      cleanupRef.current = await initDraw(ctx, roomId, socket, toolRef);
+      cleanupRef.current = await initDraw(roughCanvas,ctx, roomId, socket, toolRef);
     };
 
     setup();
@@ -48,7 +47,7 @@ const cleanupRef = useRef<(() => void) | undefined>(undefined);
         cleanupRef.current();
       }
     };        
-  }, [roomId, socket]); // Only re-initialize when roomId or socket changes
+  }, [roomId, socket]); 
 
   return (
     <div>

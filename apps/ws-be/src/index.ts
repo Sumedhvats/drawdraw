@@ -13,7 +13,6 @@ const users: User[] = [];
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("connection",(ws, request) => {
-  console.log("someone tried to connect");
   
   function checkUser(token: string): string | null {
     try {
@@ -24,10 +23,11 @@ wss.on("connection",(ws, request) => {
       return null;
     }
   }
-
+  
   const url = request.url;
   if (!url) {
     ws.close();
+    console.log("cannot connect");
     return;
   }
 

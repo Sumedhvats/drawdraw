@@ -9,7 +9,7 @@ export function CanvasRoom({ roomId }: { roomId: string }) {
   const [selectedTool, setSelectedTool] = useState<"circle" | "rectangle" | "pencil">("circle");
 
   useEffect(() => {
-    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}?token=your_token_here`;
+    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDg0MzU3ODYsImV4cCI6MTc0OTA0MDU4Nn0.ZuyEeGEBDRIhEiSlfWz-0ZVsopohuU8fW4SLW8XQyYk`;
     if (!wsUrl) {
       setError("WebSocket URL is not defined.");
       return;
@@ -29,6 +29,7 @@ export function CanvasRoom({ roomId }: { roomId: string }) {
     ws.onerror = (e) => {
       console.error("WebSocket error:", e);
       setError("WebSocket connection failed.");
+      
     };
 
     return () => {
