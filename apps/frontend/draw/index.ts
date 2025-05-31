@@ -30,13 +30,11 @@ export async function initDraw(
   const canvas = ctx.canvas;
   let existingShapes: Shape[] = await getExistingShapes(roomId);
   
-  // Track if we're already initialized to prevent duplicate listeners
   if (canvas.dataset.initialized === 'true') {
-    return () => {}; // Return empty cleanup if already initialized
+    return () => {}; 
   }
   canvas.dataset.initialized = 'true';
 
-  // Use a Set to track processed message IDs to prevent duplicates
   const processedMessages = new Set<string>();
 
   const handleSocketMessage = (event: MessageEvent) => {
@@ -45,7 +43,6 @@ export async function initDraw(
     try {
       const message = JSON.parse(event.data);
       if (message.type === "chat") {
-        // Create a unique ID for this message to prevent duplicates
         const messageId = `${message.roomId}-${Date.now()}-${Math.random()}`;
         
         if (processedMessages.has(messageId)) {
@@ -275,7 +272,7 @@ export async function initDraw(
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDg0MzU3ODYsImV4cCI6MTc0OTA0MDU4Nn0.ZuyEeGEBDRIhEiSlfWz-0ZVsopohuU8fW4SLW8XQyYk`,
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDg2NzI4NTMsImV4cCI6MTc0OTI3NzY1M30.9uwxLGPwQojkNzLg5kwXffd3CQZh_2ETU2u934kfc3w`,
           },
         }
       );
