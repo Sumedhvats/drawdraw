@@ -9,7 +9,7 @@ export function CanvasRoom({ roomId }: { roomId: string }) {
   const [selectedTool, setSelectedTool] = useState<"circle" | "rectangle" | "pencil">("circle");
 
   useEffect(() => {
-    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}?token=your_token_here`;
+    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDg3ODg3OTgsImV4cCI6MTc0OTM5MzU5OH0.3zz2Bmdbgun_vicuqkY1cudKpk1s26Q-BrhYUfNZ7WQ`;
     if (!wsUrl) {
       setError("WebSocket URL is not defined.");
       return;

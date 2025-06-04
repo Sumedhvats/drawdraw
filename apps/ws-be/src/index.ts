@@ -60,6 +60,7 @@ wss.on("connection",(ws, request) => {
     if (parsedData.type === "join_room") {
       
       user.rooms.push(parsedData.roomId);
+console.log("joined a room");
 
       
       ws.send("connected")

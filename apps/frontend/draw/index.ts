@@ -200,7 +200,7 @@ export async function initDraw(
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDgyODgzMDksImV4cCI6MTc0ODg5MzEwOX0.1JJirS45iflaOxHGqA9TKE53GUXnfVQbdk7jJv6KynU`,
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTBiZTI4Ni1iOTRlLTRmMTktODI3My1mOTczMmM0ZjU2ZTEiLCJ1c2VybmFtZSI6InN1bWVkaFZhdHMiLCJpYXQiOjE3NDg3ODg3OTgsImV4cCI6MTc0OTM5MzU5OH0.3zz2Bmdbgun_vicuqkY1cudKpk1s26Q-BrhYUfNZ7WQ`,
           },
         }
       );
